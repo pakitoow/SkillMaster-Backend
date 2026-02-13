@@ -108,7 +108,6 @@ class AuthController extends AbstractController
     #[Route('/me', name: 'api_me', methods: ['GET'])]
     public function me(): JsonResponse
     {
-        // FIX: getUser() returns ?UserInterface — cast to concrete User class safely
         $user = $this->getUser();
 
         if (!$user instanceof User) {
