@@ -13,7 +13,6 @@ services:
             - .:/var/www/html:ro,cached
             - ./var/log/nginx:/var/log/nginx
             - ./infra/nginx/conf.d:/etc/nginx/conf.d
-            - ./infra/nginx/conf.d:/etc/nginx/conf.d
         depends_on:
             - php
         networks:
@@ -30,16 +29,20 @@ services:
             - ./infra/php/xdebug/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
         depends_on:
             - database
+            - postgres
         networks:
             - internal_network
         expose:
             - "9000"
             - "9003"
 
+    # -------- MYSQL --------
     database:
         image: mysql
         platform: linux/x86_64
-        command: --innodb-use-native-aio=${INNODB_USE_NATIVE_AIO:-1} --sql_mode=${SQL_MODE:-"ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"}
+        command: >
+            --innodb-use-native-aio=${INNODB_USE_NATIVE_AIO:-1}
+            --sql_mode=${SQL_MODE:-"ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"}
         environment:
             MYSQL_ROOT_PASSWORD: secret
             MYSQL_DATABASE: travel
@@ -62,11 +65,44 @@ services:
             - internal_network
         volumes:
             - db_admin_data:/var/www/html
+
+    # -------- POSTGRES --------
+    postgres:
+        image: postgres:16
+        container_name: symfony_postgres
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: symfony_db
+            POSTGRES_USER: symfony
+            POSTGRES_PASSWORD: symfony
+        ports:
+            - "5432:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        networks:
+            - internal_network
+
+    pgadmin:
+        image: dpage/pgadmin4
+        container_name: symfony_pgadmin
+        restart: unless-stopped
+        environment:
+            PGADMIN_DEFAULT_EMAIL: admin@admin.com
+            PGADMIN_DEFAULT_PASSWORD: admin
+        ports:
+            - "5050:80"
+        depends_on:
+            - postgres
+        networks:
+            - internal_network
+
 volumes:
     db_admin_data:
     mysql:
     mysql_user:
+    postgres_data:
 
 networks:
     internal_network:
         name: internal_network
+

@@ -19,3 +19,10 @@
 /assets/vendor/
 ###< symfony/asset-mapper ###
 /.idea
+
+###> lexik/jwt-authentication-bundle ###
+/config/jwt/*.pem
+###< lexik/jwt-authentication-bundle ###
+.env.local
+config/jwt/private.pem
+config/jwt/public.pem

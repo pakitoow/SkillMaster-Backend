@@ -1,11 +1,14 @@
 FROM php:8.3-fpm
 
-# set main params
+# --------------------
+# Build arguments
+# --------------------
 ARG BUILD_ARGUMENT_ENV=dev
+ENV APP_HOME=/var/www/html
 
-ENV APP_HOME /var/www/html
-
-# install all the dependencies and enable PHP modules
+# --------------------
+# System dependencies + PHP extensions
+# --------------------
 RUN apt-get update && apt-get upgrade -y && apt-get install -y \
       bash-completion \
       fish \
@@ -24,54 +27,61 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \
       libzip-dev \
       wget \
       librabbitmq-dev \
+      libpq-dev \
     && pecl install amqp \
     && docker-php-ext-configure pdo_mysql --with-pdo-mysql=mysqlnd \
     && docker-php-ext-configure intl \
     && docker-php-ext-install \
+      pdo \
       pdo_mysql \
+      pdo_pgsql \
       sockets \
       intl \
       opcache \
       zip \
     && docker-php-ext-enable amqp \
     && rm -rf /tmp/* \
-    && rm -rf /var/list/apt/* \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# install composer
+# --------------------
+# Composer
+# --------------------
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN chmod +x /usr/bin/composer
-ENV COMPOSER_ALLOW_SUPERUSER 1
+ENV COMPOSER_ALLOW_SUPERUSER=1
 
 # Enable Composer autocompletion
 RUN composer completion bash > /etc/bash_completion.d/composer
 
-# set working directory
+# --------------------
+# Working directory
+# --------------------
 WORKDIR $APP_HOME
 
-# Installer APCu
+# --------------------
+# APCu
+# --------------------
 RUN mkdir -p /usr/src/php/ext/apcu && \
     curl -fsSL https://pecl.php.net/get/apcu | tar xvz -C "/usr/src/php/ext/apcu" --strip 1 && \
     docker-php-ext-install apcu
 
-# Installer Xdebug
+# --------------------
+# Xdebug
+# --------------------
 RUN pecl install xdebug-3.3.1 && \
     docker-php-ext-enable xdebug
 
-# Installer l'extension Redis
-#RUN pecl install redis && \
-#    docker-php-ext-enable redis
-
-# Installer MongoDB
-#RUN pecl install mongodb && docker-php-ext-enable mongodb
-
+# --------------------
+# Extra system libs (kept from your original file)
+# --------------------
 RUN echo "deb http://security.debian.org/debian-security bullseye-security main contrib non-free" > /etc/apt/sources.list && \
-    apt-get update && apt-get upgrade -y
-RUN apt-get install -y git  libxslt-dev libldap2-dev libssl-dev
-
-# Installer les extensions PHP
-#COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
-#RUN install-php-extensions gd bcmath zip xsl ldap
+    apt-get update && apt-get upgrade -y && \
+    apt-get install -y \
+        git \
+        libxslt-dev \
+        libldap2-dev \
+        libssl-dev
 
 USER root
+
