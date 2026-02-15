@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -43,6 +45,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
+
+    /**
+     * @var Collection<int, UserSkill>
+     */
+    #[ORM\OneToMany(targetEntity: UserSkill::class, mappedBy: 'owner')]
+    private Collection $userSkill;
+
+    public function __construct()
+    {
+        $this->userSkill = new ArrayCollection();
+    }
 
     #[ORM\PrePersist]
     public function setCreatedAtValue(): void
@@ -113,5 +126,35 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function eraseCredentials(): void
     {
+    }
+
+    /**
+     * @return Collection<int, UserSkill>
+     */
+    public function getUserSkill(): Collection
+    {
+        return $this->userSkill;
+    }
+
+    public function addUserSkill(UserSkill $userSkill): static
+    {
+        if (!$this->userSkill->contains($userSkill)) {
+            $this->userSkill->add($userSkill);
+            $userSkill->setOwner($this);
+        }
+
+        return $this;
+    }
+
+    public function removeUserSkill(UserSkill $userSkill): static
+    {
+        if ($this->userSkill->removeElement($userSkill)) {
+            // set the owning side to null (unless already changed)
+            if ($userSkill->getOwner() === $this) {
+                $userSkill->setOwner(null);
+            }
+        }
+
+        return $this;
     }
 }
