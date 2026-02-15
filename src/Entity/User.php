@@ -24,12 +24,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(type: 'string', length: 255)]
     #[Assert\NotBlank(message: 'Full name is required')]
-    #[Assert\Length(
-        min: 2,
-        max: 255,
-        minMessage: 'Full name must be at least {{ limit }} characters',
-        maxMessage: 'Full name cannot exceed {{ limit }} characters'
-    )]
+    #[Assert\Length(min: 2, max: 255)]
     private string $fullName;
 
     #[ORM\Column(type: 'string', length: 180, unique: true)]
@@ -46,10 +41,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
+    // ── Target role (nullable — user may not have set one yet) ──
+    #[ORM\ManyToOne(targetEntity: Role::class)]
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+    private ?Role $targetRole = null;
+
     /**
      * @var Collection<int, UserSkill>
      */
-    #[ORM\OneToMany(targetEntity: UserSkill::class, mappedBy: 'owner')]
+    #[ORM\OneToMany(targetEntity: UserSkill::class, mappedBy: 'owner', cascade: ['remove'])]
     private Collection $userSkill;
 
     public function __construct()
@@ -63,78 +63,30 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->createdAt = new \DateTimeImmutable();
     }
 
-    public function getId(): ?int
-    {
-        return $this->id;
-    }
+    public function getId(): ?int { return $this->id; }
 
-    public function getFullName(): string
-    {
-        return $this->fullName;
-    }
+    public function getFullName(): string { return $this->fullName; }
+    public function setFullName(string $fullName): self { $this->fullName = $fullName; return $this; }
 
-    public function setFullName(string $fullName): self
-    {
-        $this->fullName = $fullName;
-        return $this;
-    }
+    public function getEmail(): string { return $this->email; }
+    public function setEmail(string $email): self { $this->email = strtolower(trim($email)); return $this; }
 
-    public function getEmail(): string
-    {
-        return $this->email;
-    }
+    public function getPassword(): string { return $this->password; }
+    public function setPassword(string $password): self { $this->password = $password; return $this; }
 
-    public function setEmail(string $email): self
-    {
-        $this->email = strtolower(trim($email));
-        return $this;
-    }
+    public function getRoles(): array { return array_unique(array_merge($this->roles, ['ROLE_USER'])); }
+    public function setRoles(array $roles): self { $this->roles = $roles; return $this; }
 
-    public function getPassword(): string
-    {
-        return $this->password;
-    }
+    public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
 
-    public function setPassword(string $password): self
-    {
-        $this->password = $password;
-        return $this;
-    }
+    public function getTargetRole(): ?Role { return $this->targetRole; }
+    public function setTargetRole(?Role $role): self { $this->targetRole = $role; return $this; }
 
-    public function getRoles(): array
-    {
-        $roles = $this->roles;
-        $roles[] = 'ROLE_USER';
-        return array_unique($roles);
-    }
+    public function getUserIdentifier(): string { return $this->email; }
+    public function eraseCredentials(): void {}
 
-    public function setRoles(array $roles): self
-    {
-        $this->roles = $roles;
-        return $this;
-    }
-
-    public function getCreatedAt(): \DateTimeImmutable
-    {
-        return $this->createdAt;
-    }
-
-    public function getUserIdentifier(): string
-    {
-        return $this->email;
-    }
-
-    public function eraseCredentials(): void
-    {
-    }
-
-    /**
-     * @return Collection<int, UserSkill>
-     */
-    public function getUserSkill(): Collection
-    {
-        return $this->userSkill;
-    }
+    /** @return Collection<int, UserSkill> */
+    public function getUserSkill(): Collection { return $this->userSkill; }
 
     public function addUserSkill(UserSkill $userSkill): static
     {
@@ -142,19 +94,16 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
             $this->userSkill->add($userSkill);
             $userSkill->setOwner($this);
         }
-
         return $this;
     }
 
     public function removeUserSkill(UserSkill $userSkill): static
     {
         if ($this->userSkill->removeElement($userSkill)) {
-            // set the owning side to null (unless already changed)
             if ($userSkill->getOwner() === $this) {
                 $userSkill->setOwner(null);
             }
         }
-
         return $this;
     }
 }

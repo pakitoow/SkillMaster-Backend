@@ -2,6 +2,7 @@
 
 namespace App\Repository;
 
+use App\Entity\User;
 use App\Entity\UserSkill;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -16,28 +17,27 @@ class UserSkillRepository extends ServiceEntityRepository
         parent::__construct($registry, UserSkill::class);
     }
 
-    //    /**
-    //     * @return UserSkill[] Returns an array of UserSkill objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('u')
-    //            ->andWhere('u.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('u.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    /** @return UserSkill[] */
+    public function findByUser(User $user): array
+    {
+        return $this->createQueryBuilder('us')
+            ->join('us.skill', 's')
+            ->addSelect('s')
+            ->where('us.owner = :user')
+            ->setParameter('user', $user)
+            ->orderBy('s.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 
-    //    public function findOneBySomeField($value): ?UserSkill
-    //    {
-    //        return $this->createQueryBuilder('u')
-    //            ->andWhere('u.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+    public function findOneByUserAndSkill(User $user, int $skillId): ?UserSkill
+    {
+        return $this->createQueryBuilder('us')
+            ->where('us.owner = :user')
+            ->andWhere('us.skill = :skillId')
+            ->setParameter('user', $user)
+            ->setParameter('skillId', $skillId)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }
